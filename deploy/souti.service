@@ -1,0 +1,24 @@
+[Unit]
+Description=Souti answer relay (phone calls models directly)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/souti
+Environment=SOLVER_DB_PATH=/opt/souti/data/solver.db
+Environment=SOLVER_HOST=0.0.0.0
+# 云服务器安全组通常只放行 80/443；用 80 端口时给非 root 用户绑定权限。
+Environment=SOLVER_PORT=80
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+ExecStart=/opt/souti/.venv/bin/python -m solver_server.run
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

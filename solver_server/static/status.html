@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0f0b">
+  <meta name="color-scheme" content="dark">
+  <title>解题流水线</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, -apple-system, "Microsoft YaHei", sans-serif;
+      --bg: #0b0f0b;
+      --card: #111a11;
+      --line: #24402a;
+      --text: #d6e8d2;
+      --muted: #7f9a7a;
+      --ok: #8cff80;
+      --run: #ffd166;
+      --fail: #ff6b6b;
+      --none: #4d5f4a;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+    main { max-width: 68rem; margin: 0 auto; padding: 1rem 1rem 2rem; }
+
+    header { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-bottom: 1rem; }
+    h1 { margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: .02em; }
+    .tools { display: flex; gap: .5rem; margin-left: auto; }
+    input {
+      width: 9rem; padding: .45rem .6rem; border-radius: .45rem;
+      border: 1px solid var(--line); background: #0a120a; color: var(--text);
+      font: inherit;
+    }
+    button, a.button {
+      padding: .45rem .8rem; border-radius: .45rem; border: 1px solid var(--line);
+      background: #16241a; color: var(--text); font: inherit; text-decoration: none;
+      cursor: pointer;
+    }
+    button:hover, a.button:hover { border-color: var(--ok); }
+    #conn { font-size: .85rem; color: var(--muted); }
+    #conn.bad { color: var(--fail); }
+
+    .grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .6rem; }
+    @media (max-width: 56rem) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+    .step {
+      position: relative; min-width: 0; padding: .7rem .75rem;
+      border: 1px solid var(--line); border-radius: .6rem; background: var(--card);
+      border-top: 3px solid var(--none);
+    }
+    .step.ok { border-top-color: var(--ok); }
+    .step.running { border-top-color: var(--run); box-shadow: 0 0 0 1px #3a3320 inset; }
+    .step.fail { border-top-color: var(--fail); }
+    .step .name { font-size: .8rem; color: var(--muted); }
+    .step .badge {
+      display: inline-block; margin-left: .35rem; padding: .05rem .4rem;
+      border-radius: 999px; font-size: .7rem;
+      background: #1b2a1c; color: var(--muted);
+    }
+    .step.ok .badge { background: #16351a; color: var(--ok); }
+    .step.running .badge { background: #3a3320; color: var(--run); }
+    .step.fail .badge { background: #3a1d1d; color: var(--fail); }
+    .step .msg {
+      margin-top: .45rem; font-size: .9rem; line-height: 1.35;
+      overflow-wrap: anywhere; min-height: 2.4em;
+    }
+    .step .age { margin-top: .3rem; font-size: .75rem; color: var(--muted); }
+
+    .pulse { animation: pulse 1.2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+
+    .stats { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; margin: 1rem 0 .6rem; font-size: .9rem; color: var(--muted); }
+    .stats b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+    h2 { margin: 1.2rem 0 .5rem; font-size: .95rem; color: var(--muted); font-weight: 600; }
+    .logwrap { border: 1px solid var(--line); border-radius: .6rem; overflow: auto; max-height: 55vh; background: #0a120a; }
+    table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    th, td { padding: .4rem .55rem; text-align: left; border-bottom: 1px solid #16241a; white-space: nowrap; }
+    th { position: sticky; top: 0; background: #0f180f; color: var(--muted); font-weight: 600; z-index: 1; }
+    td.msg { white-space: normal; overflow-wrap: anywhere; min-width: 12rem; }
+    tr.fail td { color: #ffb3b3; }
+    tr.running td { color: var(--run); }
+    .dot { display: inline-block; width: .5rem; height: .5rem; border-radius: 50%; margin-right: .35rem; background: var(--none); }
+    .dot.ok { background: var(--ok); }
+    .dot.running { background: var(--run); }
+    .dot.fail { background: var(--fail); }
+    .empty { padding: 1rem; color: var(--muted); font-size: .9rem; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>解题流水线</h1>
+    <span id="conn">连接中…</span>
+    <div class="tools">
+      <input id="device" maxlength="64" placeholder="设备 ID">
+      <button id="apply" type="button">查看</button>
+      <a class="button" id="answersLink" href="/">答案页</a>
+    </div>
+  </header>
+
+  <section class="grid" id="steps" aria-label="流水线阶段"></section>
+
+  <section class="stats" id="stats"></section>
+
+  <h2>事件日志（最新 40 条）</h2>
+  <div class="logwrap">
+    <table>
+      <thead>
+        <tr><th>时间</th><th>阶段</th><th>状态</th><th>详情</th><th>帧</th></tr>
+      </thead>
+      <tbody id="logs">
+        <tr><td colspan="5" class="empty">等待手机上报…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+  const STEPS = [
+    ["capture", "拍照采集"],
+    ["process", "裁剪压缩"],
+    ["model", "模型答题"],
+    ["post", "云端上报"],
+    ["done", "本轮完成"],
+    ["display", "展示更新"],
+  ];
+  const STATUS_TEXT = { ok: "正常", running: "进行中", fail: "失败", info: "信息", none: "无数据" };
+  const params = new URLSearchParams(location.search);
+  const deviceInput = document.querySelector("#device");
+  const conn = document.querySelector("#conn");
+  const stepsBox = document.querySelector("#steps");
+  const statsBox = document.querySelector("#stats");
+  const logsBody = document.querySelector("#logs");
+  const answersLink = document.querySelector("#answersLink");
+  let device = params.get("d") || "";
+  let timer = null;
+  let inFlight = false;
+
+  deviceInput.value = device;
+  answersLink.href = device ? `/?d=${encodeURIComponent(device)}` : "/";
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function ago(seconds) {
+    if (seconds === null || seconds === undefined) return "从未";
+    if (seconds < 1) return "刚刚";
+    if (seconds < 60) return `${Math.floor(seconds)} 秒前`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟前`;
+    return `${Math.floor(seconds / 3600)} 小时前`;
+  }
+
+  function timeText(epoch) {
+    if (!epoch) return "-";
+    return new Date(epoch * 1000).toLocaleTimeString("zh-CN", { hour12: false });
+  }
+
+  function stageCard(key, label, stage, now) {
+    const card = el("div", "step");
+    const head = el("div");
+    head.append(el("span", "name", label));
+    const status = stage ? stage.status : "none";
+    card.classList.add(status);
+    head.append(el("span", "badge", STATUS_TEXT[status] || status));
+    card.append(head);
+
+    const message = stage ? (stage.message || "（无详情）") : "等待手机上报";
+    card.append(el("div", "msg", message));
+
+    const seconds = stage ? now - stage.created_at : null;
+    const age = el("div", "age", stage ? ago(seconds) : "无数据");
+    if (status === "running") age.classList.add("pulse");
+    card.append(age);
+    return card;
+  }
+
+  function render(data) {
+    const now = data.server_time;
+    const stages = data.stages || {};
+    stepsBox.replaceChildren();
+    for (const [key, label] of STEPS) {
+      if (key === "display") {
+        const updated = data.display_updated_at;
+        const seconds = updated ? now - updated : null;
+        const pseudo = updated ? {
+          status: seconds !== null && seconds < 15 ? "ok" : "info",
+          message: "展示数据已更新",
+          created_at: updated,
+        } : null;
+        stepsBox.append(stageCard(key, label, pseudo, now));
+      } else {
+        stepsBox.append(stageCard(key, label, stages[key], now));
+      }
+    }
+
+    const counts = data.counts || {};
+    const frame = data.last_frame;
+    statsBox.replaceChildren();
+    const pairs = [
+      ["总帧数", counts.frames ?? 0],
+      ["已完成", counts.done ?? 0],
+      ["累计答案", counts.questions ?? 0],
+      ["待整理", counts.pending ?? 0],
+      ["最新帧", frame ? `${frame.id}（${frame.status}，${frame.answers} 题）` : "无"],
+    ];
+    for (const [label, value] of pairs) {
+      const node = el("span");
+      node.append(document.createTextNode(`${label}：`));
+      node.append(el("b", "", String(value)));
+      statsBox.append(node);
+    }
+
+    const events = data.events || [];
+    logsBody.replaceChildren();
+    if (events.length === 0) {
+      const tr = el("tr");
+      const td = el("td", "empty", "还没有事件，确认手机已开始采集且设备 ID 一致");
+      td.colSpan = 5;
+      tr.append(td);
+      logsBody.append(tr);
+    }
+    for (const event of events) {
+      const tr = el("tr", event.status === "fail" ? "fail" : event.status === "running" ? "running" : "");
+      const statusCell = el("td");
+      statusCell.append(el("span", `dot ${event.status}`));
+      statusCell.append(document.createTextNode(STATUS_TEXT[event.status] || event.status));
+      tr.append(
+        el("td", "", timeText(event.created_at)),
+        el("td", "", (STEPS.find(([key]) => key === event.stage) || [null, event.stage])[1]),
+        statusCell,
+        el("td", "msg", event.message || ""),
+        el("td", "", (event.client_frame_id || "").slice(0, 8)),
+      );
+      logsBody.append(tr);
+    }
+  }
+
+  async function refresh() {
+    if (inFlight) return;
+    inFlight = true;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    try {
+      const query = device ? `?d=${encodeURIComponent(device)}` : "";
+      const response = await fetch(`/api/v1/status${query}`, {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (!device && data.device_id) {
+        device = data.device_id;
+        deviceInput.value = device;
+        answersLink.href = `/?d=${encodeURIComponent(device)}`;
+      }
+      render(data);
+      conn.textContent = "已连接";
+      conn.classList.remove("bad");
+    } catch (_) {
+      conn.textContent = "服务器连接中断，重试中…";
+      conn.classList.add("bad");
+    } finally {
+      clearTimeout(timeout);
+      inFlight = false;
+      schedule();
+    }
+  }
+
+  function schedule() {
+    clearTimeout(timer);
+    if (!document.hidden) timer = setTimeout(refresh, 1000);
+  }
+
+  document.querySelector("#apply").addEventListener("click", () => {
+    const value = deviceInput.value.trim() || "default";
+    device = value;
+    const url = new URL(location.href);
+    url.searchParams.set("d", value);
+    history.replaceState(null, "", url);
+    answersLink.href = `/?d=${encodeURIComponent(value)}`;
+    refresh();
+  });
+  deviceInput.addEventListener("keydown", event => {
+    if (event.key === "Enter") document.querySelector("#apply").click();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refresh();
+  });
+  refresh();
+</script>
+</body>
+</html>

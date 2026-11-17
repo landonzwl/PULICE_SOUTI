@@ -1,0 +1,4 @@
+*
+!solver_server
+solver_server/__pycache__
+solver_server/data

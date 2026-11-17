@@ -1,0 +1,72 @@
+# Secrets and local environment overrides
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Runtime data, SQLite, captured images and logs
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+uploads/
+captures/
+screenshots/
+.screenshots/
+logs/
+*.log
+*.log.*
+backup/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+env/
+
+# Android and Gradle (keep the standard wrapper files tracked)
+.gradle/
+.kotlin/
+build/
+local.properties
+*.apk
+*.aab
+*.iml
+!**/gradlew
+!**/gradlew.bat
+!**/gradle/wrapper/gradle-wrapper.jar
+!**/gradle/wrapper/gradle-wrapper.properties
+
+# IDE and OS files
+.idea/
+.vscode/
+.trae/
+.DS_Store
+Thumbs.db
+
+# Microsoft Office lock files
+~$*.doc
+~$*.docx
+~$*.xls
+~$*.xlsx
+~$*.ppt
+~$*.pptx
+.~lock.*#
